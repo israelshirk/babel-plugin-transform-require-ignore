@@ -9,8 +9,11 @@ export default function () {
     visitor: {
       CallExpression: {
         enter(nodePath, { opts }) {
+          let moduleName;
+
           const extensionsInput = [].concat(opts.extensions || []);
-          if (extensionsInput.length === 0) {
+          const modulesInput = [].concat(opts.modules || []);
+          if (extensionsInput.length === 0 && modulesInput.length === 0) {
             return;
           }
           const extensions = extensionsInput.map(extFix);
@@ -23,6 +26,17 @@ export default function () {
                 throw new Error(`${arg.node.value} should not be assign to variable.`);
               } else {
                 nodePath.remove();
+              }
+            }
+
+            if (arg && arg.isStringLiteral()) {
+              for (moduleName of modulesInput) {
+                if (arg.node.value === moduleName || arg.node.value.indexOf(moduleName + '/') === 0) {
+                  if (nodePath.parentPath.isVariableDeclarator() && nodePath.parentPath.node.id && nodePath.parentPath.node.id.type === 'ObjectPattern') {
+                    throw new Error(`${arg.node.value} should not be assign to variable.`);
+                  }
+                  nodePath.remove();
+                }
               }
             }
           }
